@@ -2,7 +2,7 @@ require('dotenv').config();
 
 // Discord.js imports
 const Discord = require('discord.js');
-const client = Discord.Client();
+const client = new Discord.Client();
 
 // Image rendering modules
 const paper = require('paper');
