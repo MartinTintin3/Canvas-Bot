@@ -36,7 +36,7 @@ module.exports = {
 			const parser = new Parser();
 
 			collector.on('collect', cmd => {
-				const parsed = parser.parse(cmd.content, ctx, edits, message)
+				const parsed = parser.parse(cmd.content, ctx, edits, message);
 				cmd.reply('\n' + parsed.responseMessage).then(() => {
 					parsed.madeChanges ? edits++ : edits--;
 					const newCanvas = new Discord.MessageAttachment(canvas.toBuffer(), `drawing-board${edits}.png`);
