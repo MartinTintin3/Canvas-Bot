@@ -5,27 +5,26 @@ const { Parser } = require('../parser.js');
 
 module.exports = {
 	name: 'draw',
+	category: 'Drawing',
 	execute: ({ message, args }) => {
-		if(args.length < 1) {
-			return message.channel.send('Please specify dimensions of the canvas. Example: `c!draw 400 400`, or just do `c!draw default` for default dimensions(400x400)');
-		}
-
 		const default_dimensions = args[0] == 'default';
-		const canvas_width = Math.floor(parseInt(args[0]));
-		const canvas_height = Math.floor(parseInt(args[1]));
+		let canvas_width = Math.floor(parseInt(args[0]));
+		let canvas_height = Math.floor(parseInt(args[1]));
 
-		if(!default_dimensions && (canvas_width < 10 || canvas_height < 10)) {
+		if(!default_dimensions && (isNaN(canvas_width) || isNaN(canvas_height)) && (canvas_width < 10 || canvas_height < 10)) {
 			return message.channel.send('Dimensions can only be whole number of a minimum of 10');
 		}
 
-		const canvas = createCanvas(default_dimensions ? 400 : canvas_width, default_dimensions ? 400 : canvas_height);
+		const canvas = createCanvas(args.length == 0 ? 400 : default_dimensions ? 400 : canvas_width, args.length == 0 ? 400 : default_dimensions ? 400 : canvas_height);
+		canvas_width = canvas.width;
+		canvas_height = canvas.height;
 		const ctx = canvas.getContext('2d');
 
+		const id = Math.random().toString(36).slice(2);
 		ctx.fillStyle = 'white';
 		ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-		ctx.fillStyle = 'black';
 
-		ctx.fillRect(10, 10, 20, 20);
+		message.client.canvases.set(id, ctx.getImageData(0, 0, canvas.width, canvas.height));
 
 		let edits = 0;
 		const bufferedCanvas = new Discord.MessageAttachment(canvas.toBuffer(), `canvas${edits}.png`);
@@ -34,15 +33,16 @@ module.exports = {
 			.setTitle(`${message.author.username}'s Canvas`)
 			.attachFiles([bufferedCanvas])
 			.setImage(`attachment://canvas${edits}.png`)
-			.setDescription(`To run a canvas command, make sure it starts with \`~\`, for example: \`~clear\`. Canvas dimensions: ${default_dimensions ? '400x400(default)' : `${canvas_width}x${canvas_height}`}`)
-			.setFooter(`Edits: ${edits}`);
+			.setDescription(`To draw on the canvas, you need to type different Canvas Bot Commands. These commands will always start with a \`~\`. Full documentation can be found here: https://cbscript.github.io. Canvas dimensions: ${default_dimensions ? '400x400(default)' : `${canvas_width}x${canvas_height}`}`)
+			.setFooter(`Edits: ${edits}, ID: ${id}`);
 
 
-		let latest;
+		let latest_embed;
+		let latest_log;
 		let force_ended = false;
 
 		message.channel.send(drawingBoard).then(msg => {
-			latest = msg;
+			latest_embed = msg;
 			const filter = m => m.content.toLowerCase().startsWith('~') && m.author.id == message.author.id;
 			const collector = msg.channel.createMessageCollector(filter, { time: 600000 });
 			const parser = new Parser();
@@ -59,8 +59,10 @@ module.exports = {
 					});
 				}
 
-				const parsed = parser.parse(cmd.content, ctx);
-				cmd.reply('\n' + parsed.responseMessage).then(() => {
+				const parsed = parser.parse(cmd.content, ctx, message);
+				cmd.reply('\n' + parsed.responseMessage).then(a => {
+					message.client.canvases.set(id, ctx.getImageData(0, 0, canvas.width, canvas.height));
+					if(latest_log) latest_log.delete();
 					edits -= parsed.changes_undid == 0 && parsed.madeChanges ? -1 : parsed.changes_undid;
 					const newCanvas = new Discord.MessageAttachment(canvas.toBuffer(), `canvas${edits}.png`);
 
@@ -69,20 +71,23 @@ module.exports = {
 						.attachFiles([newCanvas])
 						.setImage(`attachment://canvas${edits}.png`)
 						.setDescription(`To run a canvas command, make sure it starts with \`~\`, for example: \`~clear\`. Canvas dimensions: ${default_dimensions ? '400x400(default)' : `${canvas_width}x${canvas_height}`}`)
-						.setFooter(`Edits: ${edits}`);
-					// eslint-disable-next-line no-empty-function
+						.setFooter(`Edits: ${edits}, ID: ${id}`);
+					/* eslint-disable no-empty-function */
 					msg.delete().catch(() => {});
-					// eslint-disable-next-line no-empty-function
 					cmd.delete().catch(() => {});
-					message.channel.send(newEmbed).then(p => latest = p);
+					latest_log = a;
+					latest_embed.delete().catch(() => {});
+					/* eslint-enable no-empty-function */
+					message.channel.send(newEmbed).then(p => latest_embed = p);
 				});
 			});
 
 			collector.on('end', () => {
 				const finalResult = new Discord.MessageAttachment(canvas.toBuffer(), 'final-result.png');
+				message.client.canvases.set(id, ctx.getImageData(0, 0, canvas.width, canvas.height));
 
-				latest.delete();
-				message.reply(`${force_ended ? 'You ended your drawing session.' : 'Your time has run out!'} You edited the board **${edits}** times. Here is your final result: `, finalResult);
+				latest_embed.delete();
+				message.reply(`${force_ended ? 'You ended your drawing session.' : 'Your time has run out!'} You edited the board **${edits}** times. ID: \`${id}\` Here is your final result: `, finalResult);
 			});
 		});
 	},

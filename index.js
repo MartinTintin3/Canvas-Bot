@@ -9,6 +9,8 @@ const { default_prefix } = require('./config.json');
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
 client.cooldowns = new Discord.Collection();
+client.canvases = new Discord.Collection();
+
 
 const commandFolders = fs.readdirSync('./commands');
 
@@ -35,8 +37,6 @@ client.once('ready', () => {
 		name: 'c!help',
 	});
 	console.log('Ready!');
-
-	client.canvases = new Discord.Collection();
 });
 
 client.on('message', message => {
@@ -72,6 +72,9 @@ client.on('message', message => {
 	}
 
 	try {
+		if(!message.guild.members.cache.get(client.user.id).hasPermission('ATTACH_FILES')) {
+			return message.channel.send('I don\'t have the `Attach Files` permission, so I cannot send any canvases for you to interact with. Message an admin to fix this');
+		}
 		command.execute({ message, args });
 	} catch (error) {
 		console.error(error);

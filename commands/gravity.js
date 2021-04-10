@@ -1,10 +1,11 @@
 const canvas = require('canvas').createCanvas(400, 400);
 const { MessageAttachment } = require('discord.js');
 // const gifencoder = require('gif-encoder-2');
-const { GIFEncoder, quantize, applyPalette } = require('gifenc');
+const GIFEncoder = require('gif-encoder-2');
 
 module.exports = {
-	name: 'paper',
+	name: 'gravity',
+	category: 'gif',
 	execute: ({ message }) => {
 		const ctx = canvas.getContext('2d');
 
@@ -21,7 +22,9 @@ module.exports = {
 		// encoder.setDelay(10);
 		// encoder.start();
 
-		const gif = GIFEncoder();
+		const encoder = new GIFEncoder(canvas.width, canvas.height);
+		encoder.start();
+		encoder.setFrameRate(24);
 
 		for(let frame = 1; ball.velocity > 1 || ball.velocity < -1; frame++) {
 			if(ball.y + ball.radius < canvas.height) {
@@ -41,24 +44,11 @@ module.exports = {
 			ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
 			ctx.fill();
 
-			const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-			const palette = quantize(data, 256);
-			const index = applyPalette(data, palette);
-			gif.writeFrame(index, width, height, { palette });
-
-			// encoder.addFrame(ctx);
+			encoder.addFrame(ctx);
 		}
 
-		gif.finish();
-		// encoder.finish();
-
-		const buffer = Buffer.alloc(gif.buffer.byteLength);
-		const view = new Uint8Array(gif.buffer);
-		for (let i = 0; i < buffer.length; ++i) {
-			buffer[i] = view[i];
-		}
-
-		// message.channel.send(new MessageAttachment(encoder.out.getData(), 'ball.gif'));
-		message.channel.send(new MessageAttachment(buffer, 'ball2.gif'));
+		encoder.finish();
+		console.log(encoder.out.getData());
+		message.channel.send(new MessageAttachment(encoder.out.getData(), 'ball.gif'));
 	},
 };
