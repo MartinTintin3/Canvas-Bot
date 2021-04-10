@@ -35,6 +35,8 @@ client.once('ready', () => {
 		name: 'c!help',
 	});
 	console.log('Ready!');
+
+	client.canvases = new Discord.Collection();
 });
 
 client.on('message', message => {
