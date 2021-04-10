@@ -21,6 +21,9 @@
     "discord.js": "^12.5.3",
     "dotenv": "^8.2.0",
     "fs": "^0.0.1-security",
+    "gif-encoder-2": "^1.0.5",
+    "gifenc": "^1.0.3",
+    "jsdom": "^16.5.2",
     "paper": "^0.12.15",
     "sqlite3": "^5.0.2"
   },
