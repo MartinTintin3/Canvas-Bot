@@ -1,7 +1,6 @@
 const canvas = require('canvas').createCanvas(400, 400);
 const { MessageAttachment } = require('discord.js');
 // const gifencoder = require('gif-encoder-2');
-const fs = require('fs');
 const { GIFEncoder, quantize, applyPalette } = require('gifenc');
 
 module.exports = {

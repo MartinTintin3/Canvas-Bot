@@ -1,44 +1,66 @@
-const paper = require('paper');
+// const paper = require('paper');
 const { createCanvas } = require('canvas');
-const { MessageAttachment } = require('discord.js');
-const GIFEncoder = require('gif-encoder-2');
+const Discord = require('discord.js');
+const { Parser } = require('../parser.js');
 
 module.exports = {
 	name: 'draw',
 	execute: ({ message }) => {
 		const canvas = createCanvas(400, 400);
 		const ctx = canvas.getContext('2d');
-		const encoder = new GIFEncoder(400, 400);
 
-		encoder.setDelay(10);
-		encoder.start();
+		ctx.fillStyle = 'white';
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		ctx.fillStyle = 'black';
 
-		// Fill background
+		ctx.fillRect(10, 10, 20, 20);
 
-		for(let i = 0; i < 50; i++) {
-			ctx.fillStyle = 'white';
-			ctx.fillRect(0, 0, canvas.width, canvas.height);
+		let edits = 0;
 
-			ctx.fillStyle = 'black';
-			ctx.fillRect(40 + i * 2, 40, 40, 40);
+		const bufferedCanvas = new Discord.MessageAttachment(canvas.toBuffer(), `drawing-board${edits}.png`);
 
-			encoder.addFrame(ctx);
-		}
+		const drawingBoard = new Discord.MessageEmbed()
+			.setTitle(`${message.author.username}'s Drawing Board`)
+			.attachFiles([bufferedCanvas])
+			.setImage(`attachment://drawing-board${edits}.png`)
+			.setDescription('To run a canvas command, make sure it starts with `~`, for example: `~clear`')
+			.setFooter(`Edits: ${edits}`);
 
-		for(let i = 50; i > 0; i--) {
-			ctx.fillStyle = 'white';
-			ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-			ctx.fillStyle = 'black';
-			ctx.fillRect(40 + i * 2, 40, 40, 40);
+		let latest;
 
-			encoder.addFrame(ctx);
-		}
+		message.channel.send(drawingBoard).then(msg => {
+			latest = msg;
+			const filter = m => m.content.toLowerCase().startsWith('~') && m.author.id == message.author.id;
+			const collector = msg.channel.createMessageCollector(filter, { time: 10000 });
 
-		encoder.finish();
+			collector.on('collect', cmd => {
+				const parser = new Parser();
 
-		const buffer = encoder.out.getData();
+				cmd.reply('\n' + parser.parse(cmd.content, ctx)).then(() => {
+					edits++;
+					const newCanvas = new Discord.MessageAttachment(canvas.toBuffer(), `drawing-board${edits}.png`);
 
-		return message.channel.send(new MessageAttachment(buffer, 'canvas.gif'));
+					const newEmbed = new Discord.MessageEmbed()
+						.setTitle(`${message.author.username}'s Drawing Board`)
+						.attachFiles([newCanvas])
+						.setImage(`attachment://drawing-board${edits}.png`)
+						.setDescription('To run a canvas command, make sure it starts with `~`, for example: `~clear`')
+						.setFooter(`Edits: ${edits}`);
+					// eslint-disable-next-line no-empty-function
+					msg.delete().catch(() => {});
+					// eslint-disable-next-line no-empty-function
+					cmd.delete().catch(() => {});
+					message.channel.send(newEmbed).then(p => latest = p);
+				});
+			});
+
+			collector.on('end', () => {
+				const finalResult = new Discord.MessageAttachment(canvas.toBuffer(), 'final-result.png');
+
+				latest.delete();
+				message.reply(`Your time has run out! You edited the board **${edits}** times. Here is your final result: `, finalResult);
+			});
+		});
 	},
 };
