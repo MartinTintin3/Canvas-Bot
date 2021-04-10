@@ -32,13 +32,13 @@ module.exports = {
 		message.channel.send(drawingBoard).then(msg => {
 			latest = msg;
 			const filter = m => m.content.toLowerCase().startsWith('~') && m.author.id == message.author.id;
-			const collector = msg.channel.createMessageCollector(filter, { time: 10000 });
+			const collector = msg.channel.createMessageCollector(filter, { time: 600000 });
+			const parser = new Parser();
 
 			collector.on('collect', cmd => {
-				const parser = new Parser();
-
-				cmd.reply('\n' + parser.parse(cmd.content, ctx)).then(() => {
-					edits++;
+				const parsed = parser.parse(cmd.content, ctx, edits, message)
+				cmd.reply('\n' + parsed.responseMessage).then(() => {
+					parsed.madeChanges ? edits++ : edits--;
 					const newCanvas = new Discord.MessageAttachment(canvas.toBuffer(), `drawing-board${edits}.png`);
 
 					const newEmbed = new Discord.MessageEmbed()
