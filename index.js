@@ -37,6 +37,7 @@ client.once('ready', () => {
 		name: 'c!help',
 	});
 	console.log('Ready!');
+	client.prefix = default_prefix;
 });
 
 client.on('message', message => {

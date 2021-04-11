@@ -5,7 +5,7 @@ const { Parser } = require('../parser.js');
 
 module.exports = {
 	name: 'draw',
-	category: 'Drawing',
+	category: 'drawing',
 	execute: ({ message, args }) => {
 		const default_dimensions = args[0] == 'default';
 		let canvas_width = Math.floor(parseInt(args[0]));
